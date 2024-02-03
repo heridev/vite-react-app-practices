@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import { SelectChangeEvent } from '@mui/material';
-import { fetchCountriesPromise } from './requests/countriesRequest.ts'
 
 // searching all countries
 // path: /all
@@ -40,7 +39,7 @@ const FILTERABLE_CAPITALS = [
 
 type Capital = (typeof FILTERABLE_CAPITALS)[number];
 
-const Countries = () => {
+const CountriesUseCallbackWhenDeclaredOutside = () => {
   const [countries, setCountries] = useState<Country[]>([]);
   const [selectedCapital, setSelectedCapital] = useState<Capital>(FILTERABLE_CAPITALS[0]);
 
@@ -49,6 +48,14 @@ const Countries = () => {
 
     setSelectedCapital(event.target.value as Capital);
   }
+
+  const fetchCountries = useCallback(async (callbackFunc: (countries: Country[]) => void) => {
+    const fetchUrl = selectedCapital === 'All' ? '/all' : `/capital/${selectedCapital}`;
+    const fetchAllUrl = `${BASE_URL}${fetchUrl}`;
+    const fetchRequest = await fetch(fetchAllUrl);
+    const fetchedData = await fetchRequest.json();
+    callbackFunc(fetchedData);
+  }, [selectedCapital])
 
   const renderCapitalSelectOptions = () => (
     <Select
@@ -60,25 +67,16 @@ const Countries = () => {
   )
 
   useEffect(() => {
-    const fetchUrl = selectedCapital === 'All' ? '/all' : `/capital/${selectedCapital}`;
-    const fetchAllUrl = `${BASE_URL}${fetchUrl}`;
-
-    const fetchCountries = async () => {
-      const fetchedData = await fetchCountriesPromise(fetchAllUrl);
-      setCountries(fetchedData);
-    }
-
-    fetchCountries();
-    // fetchCountriesPromise(fetchAllUrl).then(countries => setCountries(countries));
-  }, [selectedCapital])
+    fetchCountries(setCountries);
+  }, [fetchCountries])
 
   return (
     <>
-      <h1>List of Countries</h1>
+      <h1>List of Countries - CountriesUseCallbackWhenDeclaredOutside </h1>
       {renderCapitalSelectOptions()}
       {countries.map(country => <CountryCard key={country.name.common} country={country} />)}
     </>
   )
 }
 
-export default Countries;
+export default CountriesUseCallbackWhenDeclaredOutside;
