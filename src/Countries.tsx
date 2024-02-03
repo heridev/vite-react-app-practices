@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-
-const BASE_URL: string = 'https://restcountries.com/v3.1';
-
-// searching countries by capital
-// path: capital / { capital }
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import { SelectChangeEvent } from '@mui/material';
+import { fetchCountriesPromise } from './requests/countriesRequest.ts'
 
 // searching all countries
 // path: /all
+
+// searching countries by capital
+// path: capital / { capital }
 
 interface Country {
   name: {
@@ -25,23 +27,63 @@ const CountryCard: React.FC<CountryCardProps> = ({ country }) => {
   )
 }
 
+const BASE_URL: string = 'https://restcountries.com/v3.1';
+const FILTERABLE_CAPITALS = [
+  'All',
+  'Tallin',
+  'Helsinki',
+  'Stockholm',
+  'Oslo',
+  'Copenhagen',
+  'Reykjavik',
+] as const;
+
+type Capital = (typeof FILTERABLE_CAPITALS)[number];
+
 const Countries = () => {
   const [countries, setCountries] = useState<Country[]>([]);
+  const [selectedCapital, setSelectedCapital] = useState<Capital>(FILTERABLE_CAPITALS[0]);
 
   const fetchCountries = async (callbackFunc: (countries: Country[]) => void) => {
-    const fetchAllUrl = `${BASE_URL}/all`;
+    const fetchUrl = selectedCapital === 'All' ? '/all' : `/capital/${selectedCapital}`;
+    const fetchAllUrl = `${BASE_URL}${fetchUrl}`;
     const fetchRequest = await fetch(fetchAllUrl);
     const fetchedData = await fetchRequest.json();
     callbackFunc(fetchedData);
   }
 
+  const handleSelectChange = (event: SelectChangeEvent<unknown>) => {
+    if (!event.target.value) return;
+
+    setSelectedCapital(event.target.value as Capital);
+  }
+
+  const renderCapitalSelectOptions = () => (
+    <Select
+      value={selectedCapital}
+      onChange={handleSelectChange}
+      labelId="capitals">
+      {FILTERABLE_CAPITALS.map((capital) => <MenuItem key={capital} value={capital} >{capital}</MenuItem>)}
+    </Select>
+  )
+
   useEffect(() => {
-    fetchCountries(setCountries);
-  }, [])
+    const fetchUrl = selectedCapital === 'All' ? '/all' : `/capital/${selectedCapital}`;
+    const fetchAllUrl = `${BASE_URL}${fetchUrl}`;
+
+    const fetchCountries = async () => {
+      const fetchedData = await fetchCountriesPromise(fetchAllUrl);
+      setCountries(fetchedData);
+    }
+
+    fetchCountries();
+    // fetchCountriesPromise(fetchAllUrl).then(countries => setCountries(countries));
+  }, [selectedCapital])
 
   return (
     <>
       <h1>List of Countries</h1>
+      {renderCapitalSelectOptions()}
       {countries.map(country => <CountryCard key={country.name.common} country={country} />)}
     </>
   )
